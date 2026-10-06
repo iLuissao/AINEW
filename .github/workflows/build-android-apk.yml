@@ -1,0 +1,118 @@
+name: Build Android APK with Vite & Capacitor
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Tipo de compilación (debug o release)'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build-apk:
+    name: Compilar Web con Vite y Empaquetar APK Android
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Clonar el repositorio
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      # 2. Configurar entorno Node.js
+      # El proyecto usa Vite 8, React 19 y Node 22 en el entorno de desarrollo
+      - name: Configurar Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 3. Configurar JDK para Gradle y compilación de Android
+      # Capacitor 7/8 y Android Gradle Plugin 8+ requieren Java 17 o Java 21
+      - name: Configurar Java JDK 21 (Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # 4. Aceptar licencias de Android SDK (preinstalado en el runner ubuntu-latest)
+      - name: Aceptar licencias de Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+
+      # 5. Instalar dependencias de npm
+      - name: Instalar dependencias del proyecto
+        run: |
+          npm install --legacy-peer-deps
+
+      # 6. Compilar la aplicación web con Vite
+      - name: Compilar aplicación web con Vite (dist/)
+        run: |
+          npm run build:web
+          ls -la dist/
+          test -f dist/index.html || (echo "Error: dist/index.html no fue generado por Vite" && exit 1)
+
+      # 7. Inicializar y sincronizar Capacitor con Android
+      - name: Sincronizar Capacitor con plataforma Android
+        run: |
+          if [ ! -d "android" ]; then
+            echo "Directorio android/ no encontrado. Agregando plataforma Android con Capacitor..."
+            npx cap add android
+          fi
+          echo "Sincronizando archivos estáticos compilados de dist/ hacia Android..."
+          npx cap sync android
+
+      # 8. Otorgar permisos de ejecución al wrapper de Gradle
+      - name: Dar permisos de ejecución a gradlew
+        run: |
+          chmod +x android/gradlew
+
+      # 9. Compilar el archivo APK con Gradle
+      - name: Compilar APK con Gradle
+        run: |
+          cd android
+          if [ "${{ github.event.inputs.build_type }}" = "release" ]; then
+            echo "Compilando APK en modo Release (sin firmar)..."
+            ./gradlew assembleRelease --stacktrace
+          else
+            echo "Compilando APK en modo Debug..."
+            ./gradlew assembleDebug --stacktrace
+          fi
+
+      # 10. Renombrar y listar el APK generado para trazabilidad
+      - name: Verificar archivo APK generado
+        id: find_apk
+        run: |
+          echo "Buscando APKs generados..."
+          find android/app/build/outputs/apk/ -name "*.apk" -ls
+          
+          # Crear carpeta de entrega de artefactos limpia
+          mkdir -p release-artifacts
+          cp android/app/build/outputs/apk/*/*/*.apk release-artifacts/ 2>/dev/null || cp android/app/build/outputs/apk/*/*.apk release-artifacts/ 2>/dev/null || true
+          
+          # Renombrar con timestamp y commit SHA
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          BUILD_DATE=$(date +'%Y%m%d_%H%M%S')
+          for apk in release-artifacts/*.apk; do
+            if [ -f "$apk" ]; then
+              base=$(basename "$apk" .apk)
+              new_name="release-artifacts/pv-ess-app-${base}-${BUILD_DATE}-${SHORT_SHA}.apk"
+              mv "$apk" "$new_name"
+              echo "APK preparado: $new_name"
+            fi
+          done
+
+      # 11. Subir el APK como artefacto descargable en el flujo de trabajo
+      - name: Subir APK como artefacto de GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ github.event.inputs.build_type || 'debug' }}-${{ github.sha }}
+          path: release-artifacts/*.apk
+          retention-days: 30
+          if-no-files-found: error

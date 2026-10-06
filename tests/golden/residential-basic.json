@@ -1,0 +1,30 @@
+{
+  "testId": "GOLDEN-RES-01",
+  "description": "Residential basic PV system 5.9kWp with bifacial modules and hybrid inverter",
+  "input": {
+    "installationId": "OS-2026-001",
+    "projectName": "Residencial Solar Monterrey",
+    "clientName": "Juan Pérez",
+    "pv": {
+      "totalModules": 10,
+      "powerW": 590,
+      "vmpV": 44.6,
+      "vocV": 52.8,
+      "iscA": 14.25,
+      "impA": 13.23,
+      "numberOfStrings": 2,
+      "modulesPerString": 5
+    },
+    "inverter": {
+      "ratedPowerKw": 5.0,
+      "maxOutputCurrentA": 22.7,
+      "nominalAcVoltageV": 220,
+      "systemType": "2F-2H-220V"
+    }
+  },
+  "expected": {
+    "totalPowerW": 5900,
+    "acPowerKw": 5.0,
+    "maxVoltageDropPercent": 3.0
+  }
+}

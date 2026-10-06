@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PV Model &amp; BOM Engine</string>
+    <string name="title_activity_main">PV Model &amp; BOM Engine</string>
+    <string name="package_name">com.energeka.pvunifilarmodel</string>
+    <string name="custom_url_scheme">com.energeka.pvunifilarmodel</string>
+</resources>

@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "timestamp": "2026-09-30T20:30:00Z",
+  "nodeVersion": "22.x",
+  "capacitorVersion": "7.x / 8.x",
+  "androidSdk": "API 34 (Android 14)",
+  "buildConfig": {
+    "target": "Vite SPA + Capacitor Android",
+    "bundler": "Vite",
+    "typescript": "5.x"
+  },
+  "environments": {
+    "development": "http://localhost:3000",
+    "staging": "https://ais-pre-s5hbktcbqk7kxiylecix6p-201304765716.us-west1.run.app",
+    "production": "https://ais-dev-s5hbktcbqk7kxiylecix6p-201304765716.us-west1.run.app"
+  }
+}
